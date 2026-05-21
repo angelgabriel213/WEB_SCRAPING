@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+
+<title>BuyWise PRO</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+
+font-family:'Inter',sans-serif;
+
+background:#f8fafc;
+
+color:#1e293b;
+
+}
+
+
+/* HERO */
+
+.hero{
+
+background:
+
+linear-gradient(
+135deg,
+#0f172a,
+#1e3a8a
+);
+
+padding:90px 70px;
+
+color:white;
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+flex-wrap:wrap;
+
+gap:50px;
+
+}
+
+.hero-left{
+
+max-width:650px;
+
+}
+
+.hero h1{
+
+font-size:58px;
+
+font-weight:800;
+
+line-height:1.1;
+
+margin-bottom:25px;
+
+}
+
+.hero p{
+
+font-size:18px;
+
+line-height:1.8;
+
+color:#dbeafe;
+
+margin-bottom:35px;
+
+}
+
+.btn-main{
+
+background:#2563eb;
+
+padding:16px 30px;
+
+border-radius:14px;
+
+text-decoration:none;
+
+font-weight:700;
+
+color:white;
+
+font-size:16px;
+
+transition:.3s;
+
+display:inline-block;
+
+}
+
+.btn-main:hover{
+
+transform:translateY(-3px);
+
+}
+
+
+/* TARJETA */
+
+.hero-card{
+
+background:white;
+
+border-radius:30px;
+
+padding:30px;
+
+width:350px;
+
+box-shadow:
+
+0 25px 50px rgba(0,0,0,.25);
+
+color:black;
+
+}
+
+.hero-price{
+
+font-size:40px;
+
+font-weight:800;
+
+color:#22c55e;
+
+margin:15px 0;
+
+}
+
+
+/* STATS */
+
+.stats{
+
+padding:70px;
+
+display:flex;
+
+gap:25px;
+
+justify-content:center;
+
+flex-wrap:wrap;
+
+}
+
+.stat{
+
+background:white;
+
+padding:30px;
+
+border-radius:20px;
+
+width:250px;
+
+text-align:center;
+
+box-shadow:
+
+0 10px 30px rgba(0,0,0,.08);
+
+}
+
+.stat h2{
+
+font-size:35px;
+
+color:#2563eb;
+
+margin-bottom:10px;
+
+}
+
+
+/* TIENDAS */
+
+.section{
+
+padding:70px;
+
+}
+
+.section-title{
+
+font-size:35px;
+
+font-weight:800;
+
+text-align:center;
+
+margin-bottom:20px;
+
+}
+
+.section-sub{
+
+text-align:center;
+
+color:#64748b;
+
+margin-bottom:50px;
+
+}
+
+.stores{
+
+display:grid;
+
+grid-template-columns:
+repeat(
+auto-fit,
+minmax(200px,1fr)
+);
+
+gap:25px;
+
+}
+
+.store-card{
+
+background:white;
+
+padding:25px;
+
+border-radius:25px;
+
+text-align:center;
+
+box-shadow:
+
+0 10px 30px rgba(0,0,0,.08);
+
+}
+
+.store-card img{
+
+height:60px;
+
+margin-bottom:20px;
+
+}
+
+
+/* COMO FUNCIONA */
+
+.steps{
+
+display:flex;
+
+gap:25px;
+
+flex-wrap:wrap;
+
+justify-content:center;
+
+}
+
+.step{
+
+width:300px;
+
+background:white;
+
+padding:30px;
+
+border-radius:25px;
+
+text-align:center;
+
+box-shadow:
+
+0 10px 30px rgba(0,0,0,.08);
+
+}
+
+.number{
+
+width:50px;
+height:50px;
+
+border-radius:50%;
+
+background:#2563eb;
+
+color:white;
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+font-weight:800;
+
+margin:auto;
+
+margin-bottom:15px;
+
+}
+
+
+footer{
+
+background:#0f172a;
+
+color:white;
+
+padding:35px;
+
+text-align:center;
+
+margin-top:80px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+
+<div class="hero">
+
+<div class="hero-left">
+
+<h1>
+
+Encuentra el mejor precio usando IA
+
+</h1>
+
+<p>
+
+BuyWise PRO analiza múltiples tiendas online en tiempo real,
+compara productos similares usando inteligencia artificial y encuentra automáticamente la mejor oferta disponible.
+
+</p>
+
+<form action="/buscar" method="GET">
+
+<input
+name="q"
+placeholder="Buscar productos..."
+required
+>
+
+<button
+class="btn-main"
+type="submit">
+
+Comenzar a comparar →
+
+</button>
+
+</form>
+
+</div>
+
+
+<div class="hero-card">
+
+<h3>
+
+🏆 Oferta encontrada
+
+</h3>
+
+<div style="margin-top:20px">
+
+Samsung Galaxy A32
+
+</div>
+
+<div class="hero-price">
+
+$279.900
+
+</div>
+
+<div>
+
+Ahorro detectado:
+<strong>$620.000</strong>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<div class="stats">
+
+<div class="stat">
+
+<h2>5</h2>
+
+<p>Tiendas conectadas</p>
+
+</div>
+
+
+<div class="stat">
+
+<h2>1000+</h2>
+
+<p>Productos comparados</p>
+
+</div>
+
+
+<div class="stat">
+
+<h2>95%</h2>
+
+<p>Precisión IA</p>
+
+</div>
+
+</div>
+
+
+
+<div class="section">
+
+<div class="section-title">
+
+Tiendas integradas
+
+</div>
+
+<div class="section-sub">
+
+Compra comparando entre múltiples plataformas
+
+</div>
+
+<div class="stores">
+
+
+<div class="store-card">
+
+<img src="{{ url_for('static', filename='imagenes/Almacenes_exito_logo.svg.png') }}">
+
+<h3>Éxito</h3>
+
+<p>Supermercado y tecnología</p>
+
+</div>
+
+
+<div class="store-card">
+
+<img src="{{ url_for('static', filename='imagenes/Falabella.svg.png') }}">
+
+<h3>Falabella</h3>
+
+<p>Electrónica y hogar</p>
+
+</div>
+
+
+<div class="store-card">
+
+<img src="{{ url_for('static', filename='imagenes/mercado-libre-logo-2.png') }}">
+
+<h3>Mercado Libre</h3>
+
+<p>Marketplace líder</p>
+
+</div>
+
+
+<div class="store-card">
+
+<img src="{{ url_for('static', filename='imagenes/descarga (1).png') }}">
+
+<h3>Alkosto</h3>
+
+<p>Electrodomésticos</p>
+
+</div>
+
+
+<div class="store-card">
+
+<img src="{{ url_for('static', filename='imagenes/Supertiendasolimpica2004.webp') }}">
+
+<h3>Olímpica</h3>
+
+<p>Productos y mercado</p>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<div class="section">
+
+<div class="section-title">
+
+¿Cómo funciona?
+
+</div>
+
+<div class="steps">
+
+
+<div class="step">
+
+<div class="number">1</div>
+
+<h3>Busca</h3>
+
+<p>
+
+Escribe cualquier producto
+
+</p>
+
+</div>
+
+
+<div class="step">
+
+<div class="number">2</div>
+
+<h3>Analizamos</h3>
+
+<p>
+
+La IA compara productos similares
+
+</p>
+
+</div>
+
+
+<div class="step">
+
+<div class="number">3</div>
+
+<h3>Ahorra</h3>
+
+<p>
+
+Encuentra el mejor precio
+
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+
+<footer>
+
+BuyWise PRO © 2026
+<br><br>
+Comparador inteligente de precios con IA
+
+</footer>
+
+</body>
+</html>
