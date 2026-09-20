@@ -1,4 +1,5 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from urllib.parse import quote_plus
 import re
 
 
@@ -8,7 +9,7 @@ def scrape_alkosto(query):
 
     url = (
         "https://www.alkosto.com/search"
-        f"?text={query}"
+        f"?text={quote_plus(query)}"
     )
 
     print("\nConsultando Alkosto:")
@@ -39,11 +40,6 @@ def scrape_alkosto(query):
                 url,
                 wait_until="domcontentloaded",
                 timeout=30000
-            )
-
-            # Esperar render JS
-            page.wait_for_timeout(
-                5000
             )
 
             selectors = [
@@ -80,8 +76,8 @@ def scrape_alkosto(query):
 
                         break
 
-                except:
-                    pass
+                except PlaywrightTimeoutError:
+                    continue
 
             if productos is None:
 
