@@ -1,8 +1,10 @@
-flask
+Flask
 gunicorn
 requests
 beautifulsoup4
 lxml
+playwright
+rapidfuzz
 sentence-transformers
 scikit-learn
 pandas
