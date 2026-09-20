@@ -49,6 +49,8 @@ WEB_SCRAPING/
 - Agrupación de productos similares de diferentes tiendas.
 - Uso de embeddings con Sentence Transformers y similitud coseno para apoyar la identificación de productos relacionados.
 - Ordenamiento de resultados por precio.
+- Caché local SQLite con TTL configurable para reducir scraping repetitivo.
+- Conservación de resultados aunque un producto solo esté disponible en una tienda.
 
 ## Fuentes integradas
 
@@ -125,9 +127,25 @@ El proyecto está orientado a aprendizaje y portafolio de desarrollo de software
 
 ## Próximas mejoras
 
-- Persistencia de resultados y caché para reducir scraping repetitivo.
 - Sistema de comparación más preciso entre presentaciones y tamaños.
 - Pruebas automatizadas para los scrapers.
 - Manejo centralizado de timeouts, reintentos y errores.
 - Observabilidad y logs estructurados.
 - Despliegue reproducible mediante Docker.
+
+
+## Caché de resultados
+
+BuyWise PRO utiliza SQLite para guardar temporalmente los productos obtenidos por consulta y tienda. Por defecto, los resultados se consideran vigentes durante **30 minutos**.
+
+Variables opcionales:
+
+```text
+BUYWISE_DB_PATH=buywise_cache.db
+BUYWISE_CACHE_TTL_MINUTES=30
+```
+
+En una búsqueda repetida dentro del TTL, la aplicación reutiliza los resultados almacenados y evita volver a consultar esa tienda. Si el caché está vacío o vencido, ejecuta el scraper y actualiza los datos.
+
+La base de datos local está excluida del repositorio mediante `.gitignore`.
+
