@@ -44,24 +44,16 @@ def init_cache():
 
 def get_cached_products(query, store):
     normalized_query = _normalize_query(query)
-    cutoff = datetime.now(timezone.utc) - timedelta(
-        minutes=CACHE_TTL_MINUTES
-    )
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=CACHE_TTL_MINUTES)
 
     with _connect() as connection:
         rows = connection.execute(
             """
             SELECT product, price, image, product_url, store
             FROM products_cache
-            WHERE query = ?
-              AND store = ?
-              AND fetched_at >= ?
+            WHERE query = ? AND store = ? AND fetched_at >= ?
             """,
-            (
-                normalized_query,
-                store,
-                cutoff.isoformat(),
-            ),
+            (normalized_query, store, cutoff.isoformat()),
         ).fetchall()
 
     return [
@@ -81,38 +73,41 @@ def save_products(query, products):
     if not normalized_query or not products:
         return
 
-    store = products[0].get("store")
-    if not store:
-        return
-
     fetched_at = datetime.now(timezone.utc).isoformat()
+    by_store = {}
+
+    for product in products:
+        store = product.get("store")
+        if store:
+            by_store.setdefault(store, []).append(product)
 
     with _connect() as connection:
-        connection.execute(
-            "DELETE FROM products_cache WHERE query = ? AND store = ?",
-            (normalized_query, store),
-        )
-
-        for product in products:
-            if not product.get("product") or not product.get("price"):
-                continue
-
+        for store, store_products in by_store.items():
             connection.execute(
-                """
-                INSERT OR REPLACE INTO products_cache
-                (query, store, product, price, image, product_url, fetched_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    normalized_query,
-                    store,
-                    product["product"],
-                    float(product["price"]),
-                    product.get("image", ""),
-                    product.get("url", ""),
-                    fetched_at,
-                ),
+                "DELETE FROM products_cache WHERE query = ? AND store = ?",
+                (normalized_query, store),
             )
+
+            for product in store_products:
+                if not product.get("product") or not product.get("price"):
+                    continue
+
+                connection.execute(
+                    """
+                    INSERT OR REPLACE INTO products_cache
+                    (query, store, product, price, image, product_url, fetched_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        normalized_query,
+                        store,
+                        product["product"],
+                        float(product["price"]),
+                        product.get("image", ""),
+                        product.get("url", ""),
+                        fetched_at,
+                    ),
+                )
 
 
 def clear_cache():
