@@ -1,346 +1,126 @@
 from flask import Flask, render_template, request
 
-# =========================
-# SCRAPERS
-# =========================
-
 from scrapers.exito import scrape_exito
 from scrapers.olimpica import scrape_olimpica
 from scrapers.falabella import scrape_falabella
 from scrapers.mercadolibre import scrape_mercadolibre
-from scrapers.alkosto import scrape_alkosto   # ✅ nuevo
+from scrapers.alkosto import scrape_alkosto
 
-# =========================
-# IA COMPARADOR
-# =========================
+from utils.ai_compare import compare_all_products
+from utils.cache import get_cached_products, init_cache, save_products
 
-from utils.ai_compare import (
-    compare_all_products
-)
 
 app = Flask(__name__)
 
-# =========================
-# CATÁLOGO
-# =========================
-
 CATALOGO = {
-
-    "Tecnología": [
-        "smartphone",
-        "laptop",
-        "tablet",
-        "iphone",
-        "samsung",
-        "audifonos"
-    ],
-
-    "Ropa": [
-        "camisa",
-        "zapatos",
-        "chaqueta",
-        "tenis"
-    ],
-
-    "Alimentos": [
-        "arroz",
-        "aceite",
-        "leche",
-        "azucar",
-        "cafe"
-    ],
-
-    "Bebidas": [
-        "vino",
-        "cerveza",
-        "whisky",
-        "gaseosa"
-    ]
+    "Tecnología": ["smartphone", "laptop", "tablet", "iphone", "samsung", "audifonos"],
+    "Ropa": ["camisa", "zapatos", "chaqueta", "tenis"],
+    "Alimentos": ["arroz", "aceite", "leche", "azucar", "cafe"],
+    "Bebidas": ["vino", "cerveza", "whisky", "gaseosa"],
 }
 
 
-# =========================
-# HOME
-# =========================
+def get_products_with_cache(query, store, scraper):
+    """Use fresh cached results when available; scrape only on cache miss."""
+    cached = get_cached_products(query, store)
+
+    if cached:
+        print(f"♻️ CACHE {store}: {len(cached)} productos")
+        return cached
+
+    try:
+        products = scraper(query)
+        print(f"🌐 SCRAPE {store}: {len(products)} productos")
+        if products:
+            save_products(query, products)
+        return products
+    except Exception as exc:
+        print(f"❌ Error {store}: {exc}")
+        return []
+
+
 @app.route("/")
 def landing():
+    return render_template("home.html")
 
-    return render_template(
-        "home.html"
-    )  
 
 @app.route("/buscar", methods=["GET"])
 def home():
-
-    q = request.args.get("q")
-
-    if not q:
-        q = ""
-
-    q = q.strip()
+    q = (request.args.get("q") or "").strip()
 
     print(f"\n🔍 Buscando: {q}")
 
-    # =========================
-    # SCRAPERS
-    # =========================
-
-    exito_products = []
-    olimpica_products = []
-    falabella_products = []
-    mercadolibre_products = []
-    alkosto_products = []   # ✅ nuevo
-
-
-    # =========================
-    # ÉXITO
-    # =========================
-
-    try:
-
-        exito_products = scrape_exito(
-            q,
-            1
+    if not q:
+        return render_template(
+            "index.html",
+            productos=[],
+            q=q,
+            catalogo=CATALOGO,
         )
 
-        print(
-            f"TOTAL EXITO: "
-            f"{len(exito_products)}"
-        )
+    stores = [
+        ("Exito", lambda value: scrape_exito(value, 1)),
+        ("Olimpica", scrape_olimpica),
+        ("Falabella", scrape_falabella),
+        ("MercadoLibre", scrape_mercadolibre),
+        ("Alkosto", scrape_alkosto),
+    ]
 
-    except Exception as e:
+    productos = []
 
-        print(
-            "❌ Error Exito:",
-            e
-        )
-
-
-    # =========================
-    # OLÍMPICA
-    # =========================
-
-    try:
-
-        olimpica_products = scrape_olimpica(q)
-
-        print(
-            f"TOTAL OLIMPICA: "
-            f"{len(olimpica_products)}"
-        )
-
-    except Exception as e:
-
-        print(
-            "❌ Error Olimpica:",
-            e
-        )
-
-
-    # =========================
-    # FALABELLA
-    # =========================
-
-    try:
-
-        falabella_products = scrape_falabella(q)
-
-        print(
-            f"TOTAL FALABELLA: "
-            f"{len(falabella_products)}"
-        )
-
-    except Exception as e:
-
-        print(
-            "❌ Error Falabella:",
-            e
-        )
-
-
-    # =========================
-    # MERCADO LIBRE
-    # =========================
-
-    try:
-
-        mercadolibre_products = scrape_mercadolibre(q)
-
-        print(
-            f"TOTAL MERCADO LIBRE: "
-            f"{len(mercadolibre_products)}"
-        )
-
-    except Exception as e:
-
-        print(
-            "❌ Error Mercado Libre:",
-            e
-        )
-
-
-    # =========================
-    # ALKOSTO
-    # =========================
-
-    try:
-
-        alkosto_products = scrape_alkosto(q)
-
-        print(
-            f"TOTAL ALKOSTO: "
-            f"{len(alkosto_products)}"
-        )
-
-    except Exception as e:
-
-        print(
-            "❌ Error Alkosto:",
-            e
-        )
-
-
-    # =========================
-    # UNIR PRODUCTOS
-    # =========================
-
-    productos = (
-
-        exito_products +
-
-        olimpica_products +
-
-        falabella_products +
-
-        mercadolibre_products +
-
-        alkosto_products
-    )
-
-
-    # =========================
-    # LIMPIAR PRECIOS
-    # =========================
+    for store, scraper in stores:
+        products = get_products_with_cache(q, store, scraper)
+        productos.extend(products)
 
     clean_products = []
 
-    for p in productos:
-
+    for product in productos:
         try:
-
-            p["price"] = float(
-                p.get("price", 0)
-            )
-
-            if p["price"] <= 0:
+            product["price"] = float(product.get("price", 0))
+            if product["price"] <= 0 or not product.get("product"):
                 continue
-
-            if not p.get("product"):
-                continue
-
-            clean_products.append(p)
-
-        except:
-            pass
-
-
-    # =========================
-    # ELIMINAR DUPLICADOS
-    # =========================
+            clean_products.append(product)
+        except (TypeError, ValueError):
+            continue
 
     unique = []
-
     seen = set()
 
-    for p in clean_products:
-
+    for product in clean_products:
         key = (
-
-            p.get(
-                "product",
-                ""
-            ).lower(),
-
-            p.get(
-                "store",
-                ""
-            )
+            product.get("product", "").strip().lower(),
+            product.get("store", "").strip().lower(),
         )
 
         if key not in seen:
-
             seen.add(key)
+            unique.append(product)
 
-            unique.append(p)
-
-
-    print(
-        f"Productos únicos: "
-        f"{len(unique)}"
-    )
-
-
-    # =========================
-    # IA COMPARACIÓN
-    # =========================
+    print(f"Productos únicos: {len(unique)}")
 
     try:
-
-        comparados = compare_all_products(
-            unique
-        )
-
-    except Exception as e:
-
-        print(
-            "❌ Error IA:",
-            e
-        )
-
+        comparados = compare_all_products(unique)
+    except Exception as exc:
+        print(f"❌ Error IA: {exc}")
         comparados = []
 
+    comparados.sort(key=lambda item: item["best_price"])
 
-    # =========================
-    # ORDENAR
-    # =========================
-
-    comparados = sorted(
-
-        comparados,
-
-        key=lambda x: x["best_price"]
-    )
-
-
-    print(
-        f"✅ Productos finales: "
-        f"{len(comparados)}"
-    )
-
+    print(f"✅ Productos finales: {len(comparados)}")
 
     return render_template(
-
         "index.html",
-
         productos=comparados,
-
         q=q,
-
-        catalogo=CATALOGO
+        catalogo=CATALOGO,
     )
 
 
-# =========================
-# MAIN
-# =========================
-
 if __name__ == "__main__":
+    init_cache()
 
     app.run(
-
         debug=True,
-
         host="0.0.0.0",
-
-        port=5000
+        port=5000,
     )
