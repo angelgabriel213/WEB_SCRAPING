@@ -12,6 +12,9 @@ from utils.cache import get_cached_products, init_cache, save_products
 
 app = Flask(__name__)
 
+# Initialize the local cache when the application process starts.
+init_cache()
+
 CATALOGO = {
     "Tecnología": ["smartphone", "laptop", "tablet", "iphone", "samsung", "audifonos"],
     "Ropa": ["camisa", "zapatos", "chaqueta", "tenis"],
