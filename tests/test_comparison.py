@@ -1,5 +1,7 @@
 import pytest
 
+from app import app
+from services.product_service import clean_products
 from utils.ai_compare import valid_match
 from utils.cache import _normalize_query
 from utils.size import extract_size
@@ -61,3 +63,26 @@ def test_same_product_and_size_can_match():
         product("Arroz Diana 1 kg", store="Olimpica"),
         0.90,
     )
+
+
+def test_clean_products_removes_invalid_and_duplicates():
+    products = [
+        product("Arroz Diana 1 kg", 8000, "Exito"),
+        product("Arroz Diana 1 kg", 8000, "Exito"),
+        product("Producto sin precio", 0, "Exito"),
+        product("", 5000, "Olimpica"),
+        product("Arroz Diana 1 kg", 7500, "Olimpica"),
+    ]
+
+    result = clean_products(products)
+
+    assert len(result) == 2
+    assert result[0]["price"] == 8000
+    assert result[1]["price"] == 7500
+
+
+def test_search_route_rejects_empty_query_without_scraping():
+    client = app.test_client()
+    response = client.get("/buscar")
+
+    assert response.status_code == 200
