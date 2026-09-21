@@ -38,7 +38,7 @@ def same_size(a, b):
         return False
 
     ratio = min(s1, s2) / max(s1, s2)
-    return ratio >= 0.90
+    return ratio >= 0.95
 
 
 def common_words(a, b):
