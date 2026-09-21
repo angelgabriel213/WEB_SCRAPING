@@ -149,3 +149,25 @@ En una búsqueda repetida dentro del TTL, la aplicación reutiliza los resultado
 
 La base de datos local está excluida del repositorio mediante `.gitignore`.
 
+
+
+## Docker
+
+BuyWise PRO incluye configuración para ejecutar la aplicación de forma reproducible con Docker.
+
+### Docker Compose
+
+```bash
+docker compose up --build
+```
+
+La aplicación queda disponible en el puerto `5000`.
+
+El caché SQLite se almacena en un volumen Docker para conservarlo entre reinicios.
+
+Para detener los servicios:
+
+```bash
+docker compose down
+```
+
