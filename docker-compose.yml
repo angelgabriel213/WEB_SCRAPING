@@ -1,0 +1,17 @@
+services:
+  buywise:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_DEBUG: "false"
+      LOG_LEVEL: "INFO"
+      PORT: "5000"
+      BUYWISE_DB_PATH: "/app/data/buywise_cache.db"
+      BUYWISE_CACHE_TTL_MINUTES: "30"
+    volumes:
+      - buywise_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  buywise_data:
