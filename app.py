@@ -1,3 +1,6 @@
+import logging
+import os
+
 from flask import Flask, render_template, request
 
 from scrapers.exito import scrape_exito
@@ -10,9 +13,14 @@ from utils.ai_compare import compare_all_products
 from utils.cache import get_cached_products, init_cache, save_products
 
 
-app = Flask(__name__)
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
 
-# Initialize the local cache when the application process starts.
+logger = logging.getLogger("buywise")
+
+app = Flask(__name__)
 init_cache()
 
 CATALOGO = {
@@ -24,21 +32,24 @@ CATALOGO = {
 
 
 def get_products_with_cache(query, store, scraper):
-    """Use fresh cached results when available; scrape only on cache miss."""
+    """Return fresh cache data or scrape the store when cache is missing."""
     cached = get_cached_products(query, store)
 
     if cached:
-        print(f"♻️ CACHE {store}: {len(cached)} productos")
+        logger.info("%s | CACHE | %s productos", store, len(cached))
         return cached
 
     try:
-        products = scraper(query)
-        print(f"🌐 SCRAPE {store}: {len(products)} productos")
+        products = scraper(query) or []
+        logger.info("%s | SCRAPE | %s productos", store, len(products))
+
         if products:
             save_products(query, products)
+
         return products
-    except Exception as exc:
-        print(f"❌ Error {store}: {exc}")
+
+    except Exception:
+        logger.exception("%s | ERROR | scraper failed", store)
         return []
 
 
@@ -49,15 +60,15 @@ def landing():
 
 @app.route("/buscar", methods=["GET"])
 def home():
-    q = (request.args.get("q") or "").strip()
+    query = (request.args.get("q") or "").strip()
 
-    print(f"\n🔍 Buscando: {q}")
+    logger.info("SEARCH | query=%r", query)
 
-    if not q:
+    if not query:
         return render_template(
             "index.html",
             productos=[],
-            q=q,
+            q=query,
             catalogo=CATALOGO,
         )
 
@@ -69,22 +80,29 @@ def home():
         ("Alkosto", scrape_alkosto),
     ]
 
-    productos = []
+    products = []
 
     for store, scraper in stores:
-        products = get_products_with_cache(q, store, scraper)
-        productos.extend(products)
+        products.extend(get_products_with_cache(query, store, scraper))
 
     clean_products = []
 
-    for product in productos:
+    for product in products:
         try:
-            product["price"] = float(product.get("price", 0))
-            if product["price"] <= 0 or not product.get("product"):
+            price = float(product.get("price", 0))
+
+            if price <= 0 or not product.get("product"):
                 continue
+
+            product["price"] = price
             clean_products.append(product)
+
         except (TypeError, ValueError):
-            continue
+            logger.warning(
+                "INVALID_PRODUCT | store=%s | product=%r",
+                product.get("store"),
+                product.get("product"),
+            )
 
     unique = []
     seen = set()
@@ -99,31 +117,30 @@ def home():
             seen.add(key)
             unique.append(product)
 
-    print(f"Productos únicos: {len(unique)}")
+    logger.info("SEARCH | unique_products=%s", len(unique))
 
     try:
-        comparados = compare_all_products(unique)
-    except Exception as exc:
-        print(f"❌ Error IA: {exc}")
-        comparados = []
+        compared = compare_all_products(unique)
 
-    comparados.sort(key=lambda item: item["best_price"])
+    except Exception:
+        logger.exception("COMPARISON | AI comparison failed")
+        compared = []
 
-    print(f"✅ Productos finales: {len(comparados)}")
+    compared.sort(key=lambda item: item["best_price"])
+
+    logger.info("SEARCH | final_results=%s", len(compared))
 
     return render_template(
         "index.html",
-        productos=comparados,
-        q=q,
+        productos=compared,
+        q=query,
         catalogo=CATALOGO,
     )
 
 
 if __name__ == "__main__":
-    init_cache()
-
     app.run(
-        debug=True,
+        debug=os.getenv("FLASK_DEBUG", "true").lower() == "true",
         host="0.0.0.0",
-        port=5000,
+        port=int(os.getenv("PORT", "5000")),
     )
