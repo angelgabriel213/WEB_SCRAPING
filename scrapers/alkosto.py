@@ -12,8 +12,7 @@ def scrape_alkosto(query):
         f"?text={quote_plus(query)}"
     )
 
-    print("\nConsultando Alkosto:")
-    print(url)
+    logger.info("Consultando Alkosto: %s", url)
 
     try:
 
@@ -70,9 +69,7 @@ def scrape_alkosto(query):
 
                         productos = test
 
-                        print(
-                            f"Selector usado: {selector}"
-                        )
+                        logger.info("Alkosto selector usado: %s", selector)
 
                         break
 
@@ -81,9 +78,7 @@ def scrape_alkosto(query):
 
             if productos is None:
 
-                print(
-                    "No se encontraron productos"
-                )
+                logger.warning("Alkosto: no se encontraron productos")
 
                 browser.close()
 
@@ -257,29 +252,18 @@ def scrape_alkosto(query):
                         "url": product_url
                     })
 
-                    print(
-                        f"✅ {name} - ${price}"
-                    )
+                    logger.info("Alkosto producto: %s - $%s", name, price)
 
                 except Exception as e:
 
-                    print(
-                        "Error producto:",
-                        e
-                    )
+                    logger.warning("Alkosto error procesando producto: %s", e)
 
             browser.close()
 
     except Exception as e:
 
-        print(
-            "Error Alkosto:",
-            e
-        )
+        logger.exception("Error Alkosto")
 
-    print(
-        "\nTOTAL ALKOSTO:",
-        len(resultados)
-    )
+    logger.info("TOTAL ALKOSTO: %s", len(resultados))
 
     return resultados
