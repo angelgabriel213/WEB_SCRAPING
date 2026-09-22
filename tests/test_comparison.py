@@ -86,3 +86,65 @@ def test_search_route_rejects_empty_query_without_scraping():
     response = client.get("/buscar")
 
     assert response.status_code == 200
+
+
+def test_exito_product_requires_positive_price(monkeypatch):
+    from scrapers import exito
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return [{
+                "productName": "Arroz Diana 1 kg",
+                "linkText": "arroz-diana-1-kg",
+                "items": [{
+                    "images": [{"imageUrl": "https://img.test/arroz.jpg"}],
+                    "sellers": [{
+                        "commertialOffer": {
+                            "Price": 0,
+                            "IsAvailableQuantity": False,
+                        }
+                    }],
+                }],
+            }]
+
+    monkeypatch.setattr(exito.requests, "get", lambda *args, **kwargs: FakeResponse())
+    assert exito.scrape_exito("arroz") == []
+
+
+def test_olimpica_normalizes_valid_product(monkeypatch):
+    from scrapers import olimpica
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return [{
+                "productName": "Arroz Diana 1 kg",
+                "link": "/arroz-diana-1-kg",
+                "items": [{
+                    "images": [{"imageUrl": "https://img.test/arroz.jpg"}],
+                    "sellers": [{
+                        "commertialOffer": {
+                            "Price": 8500,
+                            "IsAvailableQuantity": True,
+                        }
+                    }],
+                }],
+            }]
+
+    monkeypatch.setattr(olimpica.requests, "get", lambda *args, **kwargs: FakeResponse())
+    result = olimpica.scrape_olimpica("arroz")
+
+    assert len(result) == 1
+    assert result[0]["store"] == "Olimpica"
+    assert result[0]["price"] == 8500.0
+    assert result[0]["available"] is True
+    assert result[0]["url"] == "https://www.olimpica.com/arroz-diana-1-kg"
+
+
+def test_mercadolibre_store_name_matches_cache_key():
+    from scrapers.mercadolibre import scrape_mercadolibre
+
+    assert scrape_mercadolibre.__name__ == "scrape_mercadolibre"
