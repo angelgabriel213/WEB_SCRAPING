@@ -218,11 +218,12 @@ def compare_all_products(products):
         seen_groups.add(group_key)
         unique_results.append(result)
 
+    # Show groups with more store matches first; within the same
+    # coverage level, prefer the lower best price.
     return sorted(
         unique_results,
         key=lambda item: (
-            len(item["matches"]),
-            -item["best_price"],
+            -len(item["matches"]),
+            item["best_price"],
         ),
-        reverse=True,
     )
