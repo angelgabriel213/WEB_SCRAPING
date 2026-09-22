@@ -145,7 +145,7 @@ def scrape_mercadolibre(query, max_pages=1):
                         link = link_el.get_attribute("href") or ""
 
                     resultados.append({
-                        "store": "Mercado Libre",
+                        "store": "MercadoLibre",
                         "product": nombre,
                         "price": precio,
                         "image": imagen,
@@ -171,5 +171,5 @@ def scrape_mercadolibre(query, max_pages=1):
         vistos.add(key)
         unicos.append(p)
 
-    print(f"\nTOTAL MERCADO LIBRE: {len(unicos)}")
+    print(f"\nTOTAL MERCADOLIBRE: {len(unicos)}")
     return unicos
