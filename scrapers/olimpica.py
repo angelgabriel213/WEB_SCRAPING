@@ -1,154 +1,112 @@
+import logging
+from urllib.parse import quote_plus
+
 import requests
+
+logger = logging.getLogger(__name__)
+
+
+def _product_url(link):
+    if not link:
+        return "https://www.olimpica.com"
+
+    if link.startswith("http://") or link.startswith("https://"):
+        return link
+
+    return "https://www.olimpica.com/" + link.lstrip("/")
 
 
 def scrape_olimpica(query):
-
     resultados = []
 
     url = (
         "https://www.olimpica.com/"
         "api/catalog_system/pub/products/search/"
-        f"?ft={query}"
+        f"?ft={quote_plus(query)}"
     )
 
-    print("\nConsultando API Olímpica:")
-    print(url)
-
     headers = {
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json",
     }
 
     try:
+        logger.info("Consultando API Olímpica: %s", url)
 
         response = requests.get(
             url,
             headers=headers,
-            timeout=30
+            timeout=30,
         )
 
-        print(
-            "Status Olímpica:",
-            response.status_code
-        )
+        logger.info("Olímpica status: %s", response.status_code)
 
-        if response.status_code not in [200, 206]:
-
+        if response.status_code not in (200, 206):
+            logger.warning("Olímpica API respondió %s", response.status_code)
             return []
 
         data = response.json()
-
-        print(
-            "Productos Olímpica:",
-            len(data)
-        )
+        logger.info("Olímpica productos recibidos: %s", len(data))
 
         for item in data:
-
             try:
+                name = (item.get("productName") or "").strip()
+                if not name:
+                    continue
 
-                name = item.get(
-                    "productName",
-                    "Sin nombre"
-                )
-
-                link = item.get(
-                    "link",
-                    ""
-                )
-
-                items = item.get(
-                    "items",
-                    []
-                )
-
+                items = item.get("items") or []
                 if not items:
                     continue
 
-                seller = (
-                    items[0]
-                    .get("sellers", [{}])[0]
-                )
-
-                offer = seller.get(
-                    "commertialOffer",
-                    {}
-                )
-
-                price = (
-                    offer.get("Price")
-                    or 0
-                )
-
-                if price <= 0:
+                first_item = items[0]
+                sellers = first_item.get("sellers") or []
+                if not sellers:
                     continue
 
-                images = items[0].get(
-                    "images",
-                    []
+                offer = sellers[0].get("commertialOffer") or {}
+                price = float(offer.get("Price") or 0)
+                available = bool(
+                    offer.get("IsAvailableQuantity") or price > 0
                 )
 
-                image = ""
+                if not available or price <= 0:
+                    continue
 
-                if images:
-
-                    image = images[0].get(
-                        "imageUrl",
-                        ""
-                    )
-
-                # construir URL limpia
-                if not link:
-                    product_url = (
-                        "https://www.olimpica.com"
-                    )
-
-                elif "olimpica.com" in link:
-                    product_url = (
-                        link
-                        .replace("https//", "https://")
-                        .replace("http//", "http://")
-                    )
-
-                else:
-                    product_url = (
-                        "https://www.olimpica.com"
-                        + link
-                    )
+                images = first_item.get("images") or []
+                image = images[0].get("imageUrl", "") if images else ""
 
                 resultados.append({
-
                     "store": "Olimpica",
-
                     "product": name,
-
-                    "price": float(price),
-
+                    "price": price,
                     "image": image,
-
-                    "url": product_url
+                    "url": _product_url(item.get("link", "")),
+                    "available": True,
                 })
 
-                print(
-                    f"✅ {name} - ${price}"
-                )
+            except (TypeError, ValueError, AttributeError) as exc:
+                logger.warning("Olímpica producto inválido: %s", exc)
 
-            except Exception as e:
+    except (requests.RequestException, ValueError) as exc:
+        logger.exception("Error consultando API Olímpica: %s", exc)
+        return []
 
-                print(
-                    "Error producto:",
-                    e
-                )
+    final = []
+    seen = set()
 
-    except Exception as e:
-
-        print(
-            "Error Olímpica:",
-            e
+    for product in resultados:
+        key = (
+            product["product"].strip().lower(),
+            product["price"],
         )
+        if key in seen:
+            continue
+        seen.add(key)
+        final.append(product)
 
-    print(
-        "\nTOTAL OLIMPICA:",
-        len(resultados)
-    )
-
-    return resultados
+    logger.info("TOTAL OLIMPICA: %s", len(final))
+    return final
