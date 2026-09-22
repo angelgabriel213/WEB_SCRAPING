@@ -28,6 +28,7 @@ jobs:
 
       - name: Run tests
         env:
+          PYTHONPATH: .
           BUYWISE_DB_PATH: test_buywise_cache.db
           BUYWISE_CACHE_TTL_MINUTES: "30"
         run: pytest -q
