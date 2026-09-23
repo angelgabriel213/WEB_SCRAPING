@@ -82,13 +82,11 @@ def conflicting_variants(a, b):
 
         # Some variants are meaningful even when only one listing exposes
         # the differentiator (for example regular coffee vs decaf).
-        if group is VARIANT_GROUPS["diet"] and (a_group or b_group):
-            if a_group != b_group:
-                return True
-
-        if group is VARIANT_GROUPS["edition"] and (a_group or b_group):
-            if a_group != b_group:
-                return True
+    for variant_name in ("diet", "edition"):
+        a_group = variants_a.intersection(VARIANT_GROUPS[variant_name])
+        b_group = variants_b.intersection(VARIANT_GROUPS[variant_name])
+        if (a_group or b_group) and a_group != b_group:
+            return True
 
     # Alphanumeric model references should not silently cross-match.
     model_a = {
