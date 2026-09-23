@@ -80,6 +80,16 @@ def conflicting_variants(a, b):
         if a_group and b_group and a_group.isdisjoint(b_group):
             return True
 
+        # Some variants are meaningful even when only one listing exposes
+        # the differentiator (for example regular coffee vs decaf).
+        if group is VARIANT_GROUPS["diet"] and (a_group or b_group):
+            if a_group != b_group:
+                return True
+
+        if group is VARIANT_GROUPS["edition"] and (a_group or b_group):
+            if a_group != b_group:
+                return True
+
     # Alphanumeric model references should not silently cross-match.
     model_a = {
         token for token in variants_a
