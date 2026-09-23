@@ -68,9 +68,6 @@ def conflicting_variants(a, b):
     variants_a = extract_variant_tokens(a)
     variants_b = extract_variant_tokens(b)
 
-    if not variants_a or not variants_b:
-        return False
-
     # Exact variant agreement is required when both products expose
     # the same category of differentiating token.
     for group in VARIANT_GROUPS.values():
