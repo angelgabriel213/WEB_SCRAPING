@@ -1,6 +1,9 @@
+import logging
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from urllib.parse import quote_plus
 import re
+
+logger = logging.getLogger(__name__)
 
 
 def scrape_alkosto(query):
