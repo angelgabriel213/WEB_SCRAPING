@@ -1,272 +1,109 @@
 import logging
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
-from urllib.parse import quote_plus
 import re
+from urllib.parse import quote_plus
+
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
 
 logger = logging.getLogger(__name__)
 
 
+def _absolute_url(value):
+    if not value:
+        return ""
+    if value.startswith("http://") or value.startswith("https://"):
+        return value
+    return "https://www.alkosto.com" + (value if value.startswith("/") else f"/{value}")
+
+
 def scrape_alkosto(query):
-
     resultados = []
-
-    url = (
-        "https://www.alkosto.com/search"
-        f"?text={quote_plus(query)}"
-    )
-
+    encoded_query = quote_plus(query or "")
+    url = f"https://www.alkosto.com/search?text={encoded_query}"
     logger.info("Consultando Alkosto: %s", url)
 
     try:
-
         with sync_playwright() as p:
-
-            browser = p.chromium.launch(
-                headless=True
-            )
-
-            page = browser.new_page()
-
-            # Bloquear recursos pesados
-            page.route(
-                "**/*",
-                lambda route: (
-                    route.abort()
-                    if route.request.resource_type
-                    in ["image", "font", "media"]
-                    else route.continue_()
+            browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+            try:
+                page = browser.new_page()
+                page.route(
+                    "**/*",
+                    lambda route: route.abort()
+                    if route.request.resource_type in {"image", "font", "media"}
+                    else route.continue_(),
                 )
-            )
+                page.goto(url, wait_until="domcontentloaded", timeout=30000)
 
-            page.goto(
-                url,
-                wait_until="domcontentloaded",
-                timeout=30000
-            )
+                selectors = [".js-product-item", ".product-item", ".ais-Hits-item", "[data-product-name]"]
+                productos = None
+                for selector in selectors:
+                    try:
+                        page.wait_for_selector(selector, timeout=5000)
+                        locator = page.locator(selector)
+                        if locator.count() > 0:
+                            productos = locator
+                            logger.info("Alkosto selector usado: %s", selector)
+                            break
+                    except PlaywrightTimeoutError:
+                        continue
 
-            selectors = [
+                if productos is None:
+                    logger.warning("Alkosto: no se encontraron productos")
+                    return []
 
-                ".js-product-item",
-                ".product-item",
-                ".ais-Hits-item",
-                '[data-product-name]'
+                total = productos.count()
+                logger.info("Alkosto productos encontrados: %s", total)
+                for i in range(total):
+                    try:
+                        html = productos.nth(i).inner_html()
+                        name = ""
+                        for pattern in (r'title="([^"]+)"', r'alt="([^"]+)"', r'productName":"([^"]+)"'):
+                            match = re.search(pattern, html)
+                            if match:
+                                name = match.group(1).strip()
+                                break
+                        if not name:
+                            continue
 
-            ]
+                        prices = re.findall(r"\$[\d\.\,]+", html)
+                        if not prices:
+                            continue
+                        price_text = re.sub(r"[^\d]", "", prices[0])
+                        price = float(price_text) if price_text else 0.0
+                        if price <= 0:
+                            continue
 
-            productos = None
+                        image = ""
+                        for pattern in (r'<img[^>]+src="([^"]+)"', r'<img[^>]+data-src="([^"]+)"'):
+                            match = re.search(pattern, html)
+                            if match:
+                                image = _absolute_url(match.group(1))
+                                break
 
-            for selector in selectors:
-
-                try:
-
-                    page.wait_for_selector(
-                        selector,
-                        timeout=5000
-                    )
-
-                    test = page.locator(
-                        selector
-                    )
-
-                    if test.count() > 0:
-
-                        productos = test
-
-                        logger.info("Alkosto selector usado: %s", selector)
-
-                        break
-
-                except PlaywrightTimeoutError:
-                    continue
-
-            if productos is None:
-
-                logger.warning("Alkosto: no se encontraron productos")
-
+                        match = re.search(r'<a[^>]+href="([^"]+)"', html)
+                        product_url = _absolute_url(match.group(1)) if match else ""
+                        resultados.append({
+                            "store": "Alkosto",
+                            "product": name,
+                            "price": price,
+                            "image": image,
+                            "url": product_url,
+                            "available": True,
+                        })
+                    except Exception:
+                        logger.exception("Alkosto error procesando producto %s", i)
+            finally:
                 browser.close()
-
-                return []
-
-
-            total = productos.count()
-
-            print(
-                "Productos encontrados:",
-                total
-            )
-
-
-            # =====================
-            # Copiar HTML completo
-            # =====================
-
-            cards = []
-
-            for i in range(total):
-
-                try:
-
-                    cards.append(
-
-                        productos.nth(
-                            i
-                        ).inner_html()
-
-                    )
-
-                except:
-                    pass
-
-
-            # =====================
-            # Procesar tarjetas
-            # =====================
-
-            for html in cards:
-
-                try:
-
-                    # ----------------
-                    # Nombre
-                    # ----------------
-
-                    name = ""
-
-                    patterns = [
-
-                        r'title="([^"]+)"',
-                        r'alt="([^"]+)"',
-                        r'productName":"([^"]+)"'
-
-                    ]
-
-                    for pattern in patterns:
-
-                        m = re.search(
-                            pattern,
-                            html
-                        )
-
-                        if m:
-
-                            name = m.group(
-                                1
-                            )
-
-                            break
-
-                    if not name:
-                        continue
-
-
-                    # ----------------
-                    # Precio
-                    # ----------------
-
-                    price = ""
-
-                    precios = re.findall(
-                        r'\$[\d\.\,]+',
-                        html
-                    )
-
-                    if precios:
-
-                        price = precios[0]
-
-                        price = re.sub(
-                            r"[^\d]",
-                            "",
-                            price
-                        )
-
-                    if not price:
-                        continue
-
-
-                    # ----------------
-                    # Imagen
-                    # ----------------
-
-                    image = ""
-
-                    patterns = [
-
-                        r'<img[^>]+src="([^"]+)"',
-                        r'<img[^>]+data-src="([^"]+)"'
-
-                    ]
-
-                    for pattern in patterns:
-
-                        m = re.search(
-                            pattern,
-                            html
-                        )
-
-                        if m:
-
-                            image = m.group(
-                                1
-                            )
-
-                            break
-
-
-                    # ----------------
-                    # URL
-                    # ----------------
-
-                    product_url = ""
-
-                    m = re.search(
-                        r'<a[^>]+href="([^"]+)"',
-                        html
-                    )
-
-                    if m:
-
-                        product_url = m.group(
-                            1
-                        )
-
-                        if not product_url.startswith(
-                            "http"
-                        ):
-
-                            product_url = (
-                                "https://www.alkosto.com"
-                                + product_url
-                            )
-
-
-                    resultados.append({
-
-                        "store": "Alkosto",
-
-                        "product": name,
-
-                        "price": float(
-                            price
-                        ),
-
-                        "image": image,
-
-                        "url": product_url
-                    })
-
-                    logger.info("Alkosto producto: %s - $%s", name, price)
-
-                except Exception as e:
-
-                    logger.warning("Alkosto error procesando producto: %s", e)
-
-            browser.close()
-
-    except Exception as e:
-
-        logger.exception("Error Alkosto")
-
-    logger.info("TOTAL ALKOSTO: %s", len(resultados))
-
-    return resultados
+    except Exception:
+        logger.exception("Error consultando Alkosto")
+        return []
+
+    unicos = []
+    vistos = set()
+    for product in resultados:
+        key = (product["product"].strip().lower(), product["price"])
+        if key not in vistos:
+            vistos.add(key)
+            unicos.append(product)
+    logger.info("TOTAL ALKOSTO: %s", len(unicos))
+    return unicos
